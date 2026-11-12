@@ -1,0 +1,8 @@
+{
+  "name": "Tilewright",
+  "product": "tilewright",
+  "support_email": "support@tilewright.example",
+  "plans": [
+    { "id": "free", "name": "Free", "price": 0, "features": ["Unlimited games with friends", "Solo practice, with your ten best scores kept"] }
+  ]
+}

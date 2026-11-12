@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": ".",
+      "bindings": [{ "type": "service", "service": "api", "format": "url", "env": "API_URL" }]
+    },
+    "api": {
+      "root": "api",
+      "runtime": "container"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/paddle/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}
