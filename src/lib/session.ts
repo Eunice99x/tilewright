@@ -25,3 +25,8 @@ export async function visitorIp(): Promise<string | undefined> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip")?.trim() || undefined;
 }
+
+/** Whether the visitor looks signed in, from the hint cookie. Only for showing or hiding things, never for access. */
+export async function looksSignedIn(): Promise<boolean> {
+  return (await cookies()).get(HINT_COOKIE)?.value === "1";
+}

@@ -41,9 +41,10 @@ func userView(u store.User) User {
 		Name: name, Guest: isGuest(u.Email)}
 }
 
+// validEmail also refuses the guest domain: nobody may sign up, sign in with OAuth or reset as a guest address.
 func validEmail(email string) bool {
 	a, err := mail.ParseAddress(email)
-	return err == nil && a.Address == email && len(email) <= 254
+	return err == nil && a.Address == email && len(email) <= 254 && !isGuest(email)
 }
 
 func (s *Service) Signup(ctx context.Context, ip, email, password string) (token string, u User, err error) {

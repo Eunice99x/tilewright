@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FeedbackBox } from "@/components/feedback-box";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table } from "@/components/ui/table";
@@ -97,6 +98,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </Table>
         </Card>
       )}
+      <FeedbackBox page="/dashboard" signedIn={!me.user.guest} />
     </>
   );
 }

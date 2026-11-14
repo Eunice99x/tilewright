@@ -131,6 +131,7 @@ header.nav > .wrap { height: 100%; display: flex; align-items: center; justify-c
 .input { min-height: 44px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); color: var(--ink); font: 400 16px var(--font); transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease); }
 .input:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgb(255 72 139 / .25); }
 .form .input { width: 100%; }
+.area { width: 100%; padding: 10px 14px; min-height: 96px; resize: vertical; }
 ::placeholder { color: var(--muted); opacity: 1; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: clamp(20px, 3vw, 32px); display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; }
 .card.on { border-color: var(--accent); }
@@ -236,6 +237,7 @@ button.rack-tile:active { transform: scale(.97); }
 .moves .pts { font-weight: 500; font-variant-numeric: tabular-nums; }
 .help { line-height: 1.5; }
 .final { display: grid; gap: 10px; justify-items: start; }
+.final > .card { width: 100%; max-width: 560px; margin-top: 18px; }
 .final-score { font-size: clamp(56px, 4vw + 32px, 88px); font-weight: var(--display-weight); letter-spacing: var(--display-tracking-xl); line-height: 1; }
 .invite { display: grid; gap: 10px; width: 100%; max-width: 600px; background: var(--surface); border: 1px solid var(--pink); border-radius: var(--r-md); padding: 16px 18px; }
 .invite-row { display: flex; gap: 8px; }

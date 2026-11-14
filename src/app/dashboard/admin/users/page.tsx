@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Table } from "@/components/ui/table";
 import { ApiError, api, type AdminUsersPage } from "@/lib/api";
 import { PLANS, planName } from "@/lib/plans";
-import { fullDay, n, signIn } from "../format";
+import { dayTime, fullDay, n, signIn } from "../format";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -72,7 +72,7 @@ export default async function Users({ searchParams }: PageProps<"/dashboard/admi
         {users.length > 0 ? (
           <Table>
             <thead>
-              <tr><th>Email</th><th>Plan</th><th>Subscription</th><th>Confirmed</th><th>Sign-in</th><th>Joined</th></tr>
+              <tr><th>Email</th><th>Plan</th><th>Subscription</th><th>Confirmed</th><th>Sign-in</th><th>Joined</th><th>Last sign-in</th></tr>
             </thead>
             <tbody>
               {users.map((u) => (
@@ -83,6 +83,7 @@ export default async function Users({ searchParams }: PageProps<"/dashboard/admi
                   <td>{u.confirmed ? <Badge tone="good">Yes</Badge> : <Badge>No</Badge>}</td>
                   <td>{signIn(u.sign_in)}</td>
                   <td>{fullDay(u.created_at)}</td>
+                  <td>{u.last_seen ? dayTime(u.last_seen) : <span className="muted">None</span>}</td>
                 </tr>
               ))}
             </tbody>

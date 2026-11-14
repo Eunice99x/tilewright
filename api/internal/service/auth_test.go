@@ -18,6 +18,9 @@ func TestSignupLogin(t *testing.T) {
 	if _, _, err := s.Signup(ctx, testIP, "not an email", "longenough"); !errors.Is(err, ErrInvalidEmail) {
 		t.Fatalf("bad email: got %v", err)
 	}
+	if _, _, err := s.Signup(ctx, testIP, "Guest-ABC@"+guestDomain, "longenough"); !errors.Is(err, ErrInvalidEmail) {
+		t.Fatalf("guest address: got %v", err)
+	}
 	token, u, err := s.Signup(ctx, testIP, "  Jane@Example.com ", "longenough")
 	if err != nil || token == "" {
 		t.Fatalf("signup: %v", err)

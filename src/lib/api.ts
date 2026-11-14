@@ -39,6 +39,8 @@ export interface AdminUser {
   confirmed: boolean;
   sign_in: string[];
   created_at: string;
+  /** When the newest live session began. null once every session has ended or been signed out. */
+  last_seen: string | null;
 }
 
 export interface AdminUsersPage {
@@ -53,6 +55,25 @@ export interface AdminUserDetail extends AdminUser {
   subscription_id: string;
   lifetime_plan: string;
   lifetime_transaction_id: string;
+}
+
+/** One message from the feedback box. */
+export interface Feedback {
+  id: string;
+  /** null for a visitor without an account, or one whose account is gone. */
+  user_id: string | null;
+  /** "" when they left none. */
+  email: string;
+  message: string;
+  page: string;
+  created_at: string;
+}
+
+export interface AdminFeedbackPage {
+  feedback: Feedback[];
+  total: number;
+  offset: number;
+  page_size: number;
 }
 
 export interface Placement {
@@ -121,13 +142,14 @@ export class ApiError extends Error {
 interface Opts {
   method?: string;
   json?: unknown;
-  auth?: boolean;
+  /** "optional" forwards the session when there is one and goes without it otherwise. */
+  auth?: boolean | "optional";
   clientIp?: string;
 }
 
 async function call(path: string, { method = "GET", json, auth = true, clientIp }: Opts = {}): Promise<Response> {
   const token = auth ? await getSessionToken() : undefined;
-  if (auth && !token) throw new ApiError(401, "no_session");
+  if (auth === true && !token) throw new ApiError(401, "no_session");
   const base = apiUrl();
   const internalKey = process.env.INTERNAL_KEY;
   let res: Response;
@@ -179,6 +201,9 @@ export const api = {
   adminUsers: ({ q, plan, confirmed, offset }: { q: string; plan: string; confirmed: string; offset: number }) =>
     request<AdminUsersPage>(`/api/admin/users?${new URLSearchParams({ q, plan, confirmed, offset: String(offset) })}`),
   adminUser: (id: string) => request<AdminUserDetail>(`/api/admin/users/${encodeURIComponent(id)}`),
+  adminFeedback: (offset: number) => request<AdminFeedbackPage>(`/api/admin/feedback?offset=${offset}`),
+  sendFeedback: (message: string, email: string, page: string, clientIp?: string) =>
+    request<void>("/api/feedback", { method: "POST", json: { message, email, page }, auth: "optional", clientIp }),
   billingPortal: () => request<PortalLinks>("/api/billing/portal", { method: "POST" }),
 
   games: () => request<{ games: GameListItem[] }>("/api/games").then((r) => r.games),

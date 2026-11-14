@@ -106,6 +106,20 @@ func TestOAuthGoogleUnverifiedRefused(t *testing.T) {
 	}
 }
 
+func TestOAuthGuestAddressRefused(t *testing.T) {
+	f := newFakeStore()
+	s, _ := oauthService(f, map[string]string{
+		googleTokenURL:    `{"access_token":"gtok"}`,
+		googleUserInfoURL: `{"sub":"1","email":"guest-abc@` + guestDomain + `","email_verified":true}`,
+	})
+	if _, _, err := s.OAuthLogin(context.Background(), testIP, "google", "c", redirect); !errors.Is(err, ErrOAuthNoVerifiedEmail) {
+		t.Errorf("got %v", err)
+	}
+	if len(f.users) != 0 {
+		t.Error("created a user")
+	}
+}
+
 func TestOAuthGitHub(t *testing.T) {
 	f := newFakeStore()
 	s, fp := oauthService(f, githubOK(`[

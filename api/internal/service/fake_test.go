@@ -24,6 +24,8 @@ type fakeStore struct {
 	adminLimit   int
 	adminOffset  int
 	adminLookups int
+
+	feedback []store.Feedback
 }
 
 func newFakeStore() *fakeStore {
@@ -296,4 +298,26 @@ func (c *clock) add(d time.Duration) { c.t = c.t.Add(d) }
 
 func newTestService(f *fakeStore, c *clock, paddle Paddle) *Service {
 	return New(f, Config{Now: c.now, Paddle: paddle})
+}
+
+func (f *fakeStore) SaveFeedback(_ context.Context, userID, email, message, page string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	row := store.Feedback{ID: f.id(), Email: email, Message: message, Page: page, CreatedAt: time.Now()}
+	if userID != "" {
+		row.UserID = &userID
+	}
+	f.feedback = append(f.feedback, row)
+	return nil
+}
+
+func (f *fakeStore) AdminFeedback(_ context.Context, limit, offset int) ([]store.Feedback, int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.adminLimit, f.adminOffset = limit, offset
+	out := []store.Feedback{}
+	for i := len(f.feedback) - 1; i >= 0; i-- {
+		out = append(out, f.feedback[i])
+	}
+	return out, len(out), nil
 }

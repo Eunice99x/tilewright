@@ -26,9 +26,9 @@ A word-tile game (11x11 board, 80 tiles): versus a friend by invite link, taking
 - A security fix in auth or webhooks must be copied by hand to every app made from this starter. See the README.
 
 ## Commands
-- Database: `docker compose up -d --wait`, then apply `api/migrations/001_init.sql` and `002_games.sql` with `psql "postgres://postgres:postgres@localhost:5544/app?sslmode=disable" -f <file>`
+- Database: `docker compose up -d --wait`, then apply `api/migrations/001_init.sql`, `002_games.sql` and `003_feedback.sql` with `psql "postgres://postgres:postgres@localhost:5544/app?sslmode=disable" -f <file>`
 - API (:8180): `cd api && go run ./cmd/api`
 - Web (:3100): `npm run dev` (`npm start` after a build needs `API_URL=http://127.0.0.1:8180`)
 - Go: `cd api && go vet ./... && go test ./...`. Add `TEST_DATABASE_URL=...` to run the store tests against Postgres.
 - Web: `npm test && npm run lint && npm run build`
-- Deploy: `vercel --prod --yes` from the repo root.
+- Deploy: `deploy/deploy.sh` from the repo root (Contabo VPS, tilewright.younesouterbah.site). It applies every migration in `api/migrations` on each deploy.

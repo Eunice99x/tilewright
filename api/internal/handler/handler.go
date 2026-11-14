@@ -13,6 +13,7 @@ import (
 
 	"saas-starter/api/internal/game"
 	"saas-starter/api/internal/service"
+	"saas-starter/api/internal/store"
 )
 
 type Handler struct {
@@ -40,6 +41,7 @@ func (h *Handler) Routes() http.Handler {
 		r.Post("/auth/oauth", h.oauth)
 		r.Post("/auth/forgot", h.forgot)
 		r.Post("/auth/reset", h.resetPassword)
+		r.Post("/feedback", h.feedback) // no login, limited per IP; a forwarded session adds the account
 		r.Group(func(r chi.Router) {
 			r.Use(h.requireSession)
 			r.Post("/auth/logout", h.logout)
@@ -47,6 +49,7 @@ func (h *Handler) Routes() http.Handler {
 			r.Post("/auth/resend-verification", h.resendVerification)
 			r.Get("/admin/users", h.adminUsers)
 			r.Get("/admin/users/{id}", h.adminUser)
+			r.Get("/admin/feedback", h.adminFeedback)
 			r.Post("/billing/portal", h.billingPortal)
 			r.Get("/me", h.me)
 
@@ -214,6 +217,39 @@ func (h *Handler) adminUser(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, http.StatusOK, d)
+}
+
+func (h *Handler) adminFeedback(w http.ResponseWriter, r *http.Request) {
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil {
+		offset = 0
+	}
+	page, err := h.svc.AdminFeedback(r.Context(), *userFrom(r), offset)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, page)
+}
+
+// feedback is public. A session that doesn't check out is treated as a visitor, not refused: the message still counts.
+func (h *Handler) feedback(w http.ResponseWriter, r *http.Request) {
+	var in service.FeedbackInput
+	if !readJSON(w, r, &in) {
+		return
+	}
+	var u *store.User
+	if token := sessionToken(r); token != "" {
+		if su, err := h.svc.UserFromSession(r.Context(), token); err == nil {
+			u = &su
+		}
+	}
+	if err := h.svc.SendFeedback(r.Context(), clientIP(r), u, in); err != nil {
+		writeError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) billingPortal(w http.ResponseWriter, r *http.Request) {

@@ -40,6 +40,8 @@ type Store interface {
 	CreateOAuthUser(ctx context.Context, email, provider, subject string) (store.User, error)
 	AdminUsers(ctx context.Context, f store.AdminUserFilter, limit, offset int) ([]store.AdminUser, int, error)
 	AdminUserByID(ctx context.Context, id string) (store.AdminUserDetail, error)
+	SaveFeedback(ctx context.Context, userID, email, message, page string) error
+	AdminFeedback(ctx context.Context, limit, offset int) ([]store.Feedback, int, error)
 	ClaimUnverifiedAccount(ctx context.Context, userID, provider, subject string) (store.User, error)
 	SaveEmailToken(ctx context.Context, userID, kind, tokenHash string, expires time.Time) error
 	ConfirmEmail(ctx context.Context, tokenHash, userID string) error
@@ -91,6 +93,8 @@ type Service struct {
 
 	emailsByAddress *attempts
 	emailsByIP      *attempts
+
+	feedbackByIP *attempts
 }
 
 func New(st Store, cfg Config) *Service {
@@ -130,5 +134,7 @@ func New(st Store, cfg Config) *Service {
 
 		emailsByAddress: newAttempts(emailAddressLimit, time.Hour),
 		emailsByIP:      newAttempts(emailIPLimit, time.Hour),
+
+		feedbackByIP: newAttempts(feedbackIPLimit, time.Hour),
 	}
 }

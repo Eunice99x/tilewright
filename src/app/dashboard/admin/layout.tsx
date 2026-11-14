@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ApiError, api, type Me } from "@/lib/api";
 
@@ -13,5 +14,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     throw e;
   }
   if (!me.user.is_admin) notFound();
-  return <>{children}</>;
+  return (
+    <>
+      <nav className="inline small" aria-label="Admin">
+        <Link href="/dashboard/admin/users">Users</Link>
+        <Link href="/dashboard/admin/feedback">Feedback</Link>
+      </nav>
+      {children}
+    </>
+  );
 }

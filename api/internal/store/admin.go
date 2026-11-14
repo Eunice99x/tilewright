@@ -18,6 +18,7 @@ type AdminUser struct {
 	Confirmed bool           `db:"confirmed" json:"confirmed"`
 	SignIn    pq.StringArray `db:"sign_in" json:"sign_in"`
 	CreatedAt time.Time      `db:"created_at" json:"created_at"`
+	LastSeen  *time.Time     `db:"last_seen" json:"last_seen"` // the newest live sign-in; nil when none is left
 }
 
 type AdminUserDetail struct {
@@ -44,7 +45,8 @@ const adminUserCols = `u.id, u.email, ` + adminPlan + ` AS plan, u.subscription_
 		SELECT 'password' AS m WHERE u.password_hash <> ''
 		UNION SELECT i.provider FROM oauth_identities i WHERE i.user_id = u.id
 	) methods ORDER BY m = 'password' DESC, m) AS sign_in,
-	u.created_at`
+	u.created_at,
+	(SELECT max(s.created_at) FROM sessions s WHERE s.user_id = u.id) AS last_seen`
 
 var escapeLike = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace
 

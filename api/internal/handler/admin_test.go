@@ -44,6 +44,80 @@ func (*adminStore) AdminUserByID(_ context.Context, id string) (store.AdminUserD
 	return store.AdminUserDetail{AdminUser: store.AdminUser{ID: id, Email: "x@example.com"}, PaddleCustomerID: "ctm_1"}, nil
 }
 
+func (*adminStore) AdminFeedback(context.Context, int, int) ([]store.Feedback, int, error) {
+	return []store.Feedback{{ID: adminTestID, Message: "more lists"}}, 1, nil
+}
+
+// feedbackStore records what POST /api/feedback stored.
+type feedbackStore struct {
+	adminStore
+	userID, email string
+	saved         int
+}
+
+func (f *feedbackStore) SaveFeedback(_ context.Context, userID, email, _, _ string) error {
+	f.userID, f.email = userID, email
+	f.saved++
+	return nil
+}
+
+func (*feedbackStore) UserBySession(_ context.Context, hash string) (store.User, error) {
+	if hash == sessionHash("customer") {
+		return store.User{ID: "c", Email: "c@example.com"}, nil
+	}
+	return store.User{}, store.ErrNotFound
+}
+
+func TestFeedbackRoutes(t *testing.T) {
+	st := &feedbackStore{}
+	srv := httptest.NewServer(New(service.New(st, service.Config{})).Routes())
+	defer srv.Close()
+
+	post := func(body, session string) int {
+		t.Helper()
+		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/api/feedback", strings.NewReader(body))
+		if session != "" {
+			req.Header.Set("Authorization", "Session "+session)
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		return res.StatusCode
+	}
+
+	for body, want := range map[string]int{
+		`nope`:             http.StatusBadRequest,
+		`{"message":"hi"}`: http.StatusBadRequest,
+		`{"message":"ok then","page":"` + strings.Repeat("p", 201) + `"}`: http.StatusBadRequest,
+	} {
+		if code := post(body, ""); code != want {
+			t.Errorf("%.40s: %d, want %d", body, code, want)
+		}
+	}
+	if st.saved != 0 {
+		t.Fatalf("bad input was stored %d times", st.saved)
+	}
+
+	if code := post(`{"message":"works great","email":"v@example.com"}`, ""); code != http.StatusNoContent || st.userID != "" || st.email != "v@example.com" {
+		t.Errorf("visitor: %d %+v", code, st)
+	}
+	// a stale session is a visitor, not an error: the message still counts
+	if code := post(`{"message":"works great"}`, "expired"); code != http.StatusNoContent || st.userID != "" {
+		t.Errorf("stale session: %d %+v", code, st)
+	}
+	if code := post(`{"message":"works great","email":"typed@example.com"}`, "customer"); code != http.StatusNoContent || st.userID != "c" || st.email != "c@example.com" {
+		t.Errorf("signed in: %d %+v", code, st)
+	}
+	for st.saved < 10 {
+		post(`{"message":"again and again"}`, "")
+	}
+	if code := post(`{"message":"one too many"}`, ""); code != http.StatusTooManyRequests {
+		t.Errorf("over the limit: %d", code)
+	}
+}
+
 func TestAdminUserRoutes(t *testing.T) {
 	srv := httptest.NewServer(New(service.New(&adminStore{}, service.Config{})).Routes())
 	defer srv.Close()
@@ -64,7 +138,7 @@ func TestAdminUserRoutes(t *testing.T) {
 	}
 
 	const customerBody = "{\"error\":\"not found\"}\n"
-	for _, path := range []string{"/api/admin/users", "/api/admin/users?plan=gold", "/api/admin/users/" + adminTestID, "/api/admin/users/not-a-uuid"} {
+	for _, path := range []string{"/api/admin/feedback", "/api/admin/users", "/api/admin/users?plan=gold", "/api/admin/users/" + adminTestID, "/api/admin/users/not-a-uuid"} {
 		if code, body, _ := get(path, ""); code != http.StatusUnauthorized {
 			t.Errorf("%s with no session: %d %s", path, code, body)
 		}
@@ -74,7 +148,9 @@ func TestAdminUserRoutes(t *testing.T) {
 	}
 
 	for path, want := range map[string]int{
-		"/api/admin/users": http.StatusOK,
+		"/api/admin/users":                                      http.StatusOK,
+		"/api/admin/feedback":                                   http.StatusOK,
+		"/api/admin/feedback?offset=-4":                         http.StatusOK,
 		"/api/admin/users?q=%25&plan=free&confirmed=true":       http.StatusOK,
 		"/api/admin/users?offset=nope":                          http.StatusOK,
 		"/api/admin/users?offset=99999999999999999999":          http.StatusOK,

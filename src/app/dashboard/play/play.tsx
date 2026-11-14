@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type DragEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Tile } from "@/components/game/tile";
+import { FeedbackBox } from "@/components/feedback-box";
 import { Button, buttonClass } from "@/components/ui/button";
 import type { Game, GameMove, Placement } from "@/lib/api";
 import { ALL_TILES_BONUS, BONUS, CENTRE, MAX_TURNS, RACK_SIZE, SIZE, bonusAt } from "@/lib/rules";
@@ -61,7 +62,7 @@ function result(g: Game, them: string): string {
   return g.winner === g.seat ? `You win, ${mine} to ${theirs}.` : `${them} wins, ${theirs} to ${mine}.`;
 }
 
-export function Play({ initial, inviteUrl }: { initial: Game; inviteUrl?: string }) {
+export function Play({ initial, inviteUrl, guest = false }: { initial: Game; inviteUrl?: string; guest?: boolean }) {
   const [game, setGame] = useState(initial);
   const [rack, setRack] = useState<RackTile[]>(() => rackOf(initial.rack));
   const [pending, setPending] = useState<Map<string, RackTile>>(() => new Map());
@@ -422,6 +423,7 @@ export function Play({ initial, inviteUrl }: { initial: Game; inviteUrl?: string
               </form>
               <Link href="/dashboard" className={buttonClass("ghost")}>All games</Link>
             </div>
+            <FeedbackBox page={versus ? "/dashboard/play (versus, over)" : "/dashboard/play (solo, over)"} signedIn={!guest} />
           </section>
         ) : swapping ? (
           <div className="controls">

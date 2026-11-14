@@ -400,6 +400,9 @@ func TestAdminUsersIntegration(t *testing.T) {
 	if d.Plan != "starter" || d.Status != "active" || !d.Confirmed || d.PaddleCustomerID != "ctm_"+mark || d.SubscriptionID != "sub_"+mark {
 		t.Errorf("detail: %+v", d)
 	}
+	if d.LastSeen == nil || time.Since(*d.LastSeen) > time.Hour {
+		t.Errorf("last seen with a session: %v", d.LastSeen)
+	}
 	if want := []string{"password", "google"}; !slices.Equal(d.SignIn, want) {
 		t.Errorf("sign-in: %v", d.SignIn)
 	}
@@ -434,4 +437,51 @@ func TestAdminUsersIntegration(t *testing.T) {
 			t.Errorf("JSON holds %q: %s", secret, out)
 		}
 	}
+}
+
+func TestFeedbackIntegration(t *testing.T) {
+	s, ctx := testStore(t), context.Background()
+	mark := fmt.Sprintf("fb-%d", time.Now().UnixNano())
+	u, err := s.CreateUser(ctx, mark+"@example.com", "hash")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		s.db.Exec(`DELETE FROM feedback WHERE message LIKE $1`, mark+"%")
+		s.db.Exec(`DELETE FROM users WHERE id = $1`, u.ID)
+	})
+	if err := s.SaveFeedback(ctx, "", "", mark+" visitor", "/pricing"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SaveFeedback(ctx, u.ID, u.Email, mark+" account", ""); err != nil {
+		t.Fatal(err)
+	}
+	rows, total, err := s.AdminFeedback(ctx, 2, 0)
+	if err != nil || total < 2 || len(rows) != 2 {
+		t.Fatalf("page: %+v, %d, %v", rows, total, err)
+	}
+	if rows[0].Message != mark+" account" || rows[0].UserID == nil || *rows[0].UserID != u.ID || rows[1].UserID != nil || rows[1].Page != "/pricing" {
+		t.Errorf("newest first, account attached: %+v", rows)
+	}
+	// the message outlives the account
+	if _, err := s.db.Exec(`DELETE FROM users WHERE id = $1`, u.ID); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, _ = s.AdminFeedback(ctx, 1, 0)
+	if len(rows) != 1 || rows[0].UserID != nil || rows[0].Email != u.Email {
+		t.Errorf("after the account went: %+v", rows)
+	}
+}
+func testStore(t *testing.T) *Store {
+	t.Helper()
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set")
+	}
+	db, err := sqlx.Connect("postgres", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	return New(db)
 }
