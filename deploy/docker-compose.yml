@@ -1,0 +1,48 @@
+# Tilewright on the Contabo VPS, /opt/tilewright. Images built on the server (deploy/deploy.sh).
+# Caddy in /opt/edge reaches tw-web on the "edge" network. Secrets in deploy/.env (server only).
+name: tilewright
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tw-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tw
+      POSTGRES_DB: tw
+      POSTGRES_PASSWORD: ${TW_DB_PASSWORD:?missing}
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=20"]
+    volumes: [db:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tw -d tw"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 256m
+    networks: [internal]
+  api:
+    image: tilewright-api:latest
+    container_name: tw-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: "8080"
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 256m
+    networks: [internal]
+  web:
+    image: tilewright-web:latest
+    container_name: tw-web
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      API_URL: http://tw-api:8080
+    mem_limit: 384m
+    networks:
+      internal: {}
+      edge: { aliases: [tw-web] }
+volumes:
+  db:
+networks:
+  internal: {}
+  edge: { external: true }
